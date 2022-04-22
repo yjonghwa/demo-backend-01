@@ -1,6 +1,10 @@
 'use strict';
 const express = require('express');
 
+var AWSXRay = require('aws-xray-sdk');
+AWSXRay.config([AWSXRay.plugins.EC2Plugin, AWSXRay.plugins.ECSPlugin]);
+AWSXRay.setDaemonAddress('xray-service.default:2000');
+
 var app = express();
 app.use(express.json());
 
@@ -67,11 +71,16 @@ const image_list = [
     },
 ]
 
+app.use(AWSXRay.express.openSegment('demo-backend-01'));  //required at the start of your routes
+
 app.get('/services/all', function (req, res) {
+
   console.log(`${req.method} ${req.url}`);
   res.header("Access-Control-Allow-Origin", "*");
   res.send({outcome : image_list});
 });
+
+app.use(AWSXRay.express.closeSegment());  //required at the end of your routes / first in error handling routes
 
 var server = app.listen(3000, function () {
     var host = server.address().address;
